@@ -1,0 +1,97 @@
+# Note Beautifier - MVP Production Plan
+
+## 1. Project Architecture & Tech Stack
+**Goal:** Create a production-ready MVP for converting handwritten/PDF notes into clean, formatted Markdown/LaTeX.
+
+- **Backend:** FastAPI (Python 3.10+)
+- **Database:** SQLite (via SQLAlchemy or SQLModel)
+- **Processing Queue:** FastAPI `BackgroundTasks` (simple async execution)
+- **OCR Engine:** PaddleOCR (for handwriting/text detection)
+- **PDF Engine:** PyMuPDF (fitz) (for extracting images/structure from PDFs)
+- **LLM Cleanup:** External API Integration (OpenAI format for Qwen/Llama 3.1 8B)
+- **Frontend:** React (Vite) + KaTeX (for math rendering) + Tailwind CSS
+
+---
+
+## 2. MVP Directory Structure
+```text
+/Le_beaut
+├── /backend
+│   ├── /app
+│   │   ├── /core           # Config, logging
+│   │   ├── /db             # Database connection & models
+│   │   ├── /services       # Logic: ocr_service.py, llm_service.py, pdf_service.py
+│   │   ├── /api            # Routes: upload.py, results.py
+│   │   └── main.py
+│   ├── /uploads            # Temp storage for uploaded files
+│   ├── requirements.txt
+│   └── .env
+├── /frontend
+│   ├── /src
+│   │   ├── /components     # UploadForm, MarkdownViewer
+│   │   └── App.jsx
+│   └── package.json
+└── plan.txt
+```
+
+---
+
+## 3. Phase 1: Backend Foundation
+**Objective:** Set up the API server and database to track document status.
+
+1.  **Environment Setup**:
+    -   Initialize Python virtual environment.
+    -   Install dependencies: `fastapi`, `uvicorn`, `sqlalchemy`, `python-multipart`.
+2.  **Database Models**:
+    -   Create `Document` model:
+        -   `id` (UUID/Integer)
+        -   `filename` (String)
+        -   `status` (Enum: PENDING, PROCESSING, COMPLETED, FAILED)
+        -   `upload_timestamp` (DateTime)
+        -   `extracted_text` (Text - raw OCR)
+        -   `beautified_text` (Text - final LLM output)
+3.  **API Endpoints**:
+    -   `POST /api/upload`: Accepts file, saves to disk, creates DB record, triggers background task.
+    -   `GET /api/document/{id}`: Returns status and content if ready.
+
+---
+
+## 4. Phase 2: Core Processing Pipelines
+**Objective:** Implement the heavy lifting (OCR -> LLM).
+
+1.  **PDF/Image Service (`services/pdf_service.py`)**:
+    -   Use `PyMuPDF` to convert PDF pages into high-res images.
+2.  **OCR Service (`services/ocr_service.py`)**:
+    -   Initialize `PaddleOCR`.
+    -   Function to process an image and return raw string logic.
+3.  **LLM Service (`services/llm_service.py`)**:
+    -   Setup API client (e.g., `openai` python package pointing to local/remote LLM).
+    -   **Prompt Engineering**: Create system prompt effectively: *"You are a note formatter. Convert this raw OCR text into clean Markdown. Use $...$ for inline math and $$...$$ for block math."*
+4.  **Integration**:
+    -   Chain them in a background task: `PDF -> Images[] -> OCR[] -> Combine Text -> LLM -> Save to DB`.
+
+---
+
+## 5. Phase 3: Frontend Development
+**Objective:** User interface for uploading and viewing notes.
+
+1.  **Setup**:
+    -   Initialize Vite + React project.
+    -   Install `axios`, `react-markdown`, `rehype-katex`, `remark-math`, `katex` (CSS).
+2.  **Upload Component**:
+    -   Drag & Drop area.
+    -   POST file to backend.
+    -   Receive `task_id` -> Redirect to viewer.
+3.  **Viewer Component**:
+    -   Poll `GET /api/document/{id}` every 2 seconds.
+    -   Show "Processing..." spinner/progress.
+    -   Once `COMPLETED`: Render markdown with LaTeX support using `react-markdown`.
+
+---
+
+## 6. Phase 4: Polish & Refinement
+**Objective:** Ensure reliability for the MVP.
+
+1.  **Error Handling**: Handle failed OCR or LLM timeouts gracefully. Update DB status to `FAILED`.
+2.  **Cleanup**: Delete temporary uploaded files after processing.
+3.  **Basic Styling**: Ensure the note reading experience is clean (readable font, good spacing).

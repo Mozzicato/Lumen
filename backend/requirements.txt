@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+sqlalchemy
+sqlmodel
+# paddlepaddle (installed separately)
+# paddleocr (installed separately)
+pymupdf
+groq
+python-dotenv
+aiofiles
+requests
